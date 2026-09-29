@@ -605,7 +605,10 @@ export default {
         return
       }
 
-      closeAll()
+      // An outside press dismisses the menu only. The translation popup is a
+      // task surface: it closes on Escape or its own Close button, never by a
+      // stray click or a focus change (a translation may still be in flight).
+      closeMenu()
     }
 
     const onKeyDown = event => {
@@ -614,23 +617,34 @@ export default {
       }
     }
 
-    // Scroll/resize/blur close floating surfaces (a menu must not follow the
-    // page away). Scrolls INSIDE a surface are fine — the capture-phase target
+    // Scroll/resize close floating surfaces (a menu must not follow the page
+    // away). Scrolls INSIDE a surface are fine — the capture-phase target
     // identifies the scroller.
     const onScroll = event => {
       if (event.target instanceof Element && event.target.closest('[data-tl]')) {
         return
       }
 
-      closeAll()
+      closeMenu()
+    }
+
+    // Focus loss (alt-tab, clicking another app), scrolling and resizing close
+    // only the transient menu: an open translation — or one still in flight —
+    // must survive them so the user can come back to the result.
+    const onBlur = () => {
+      closeMenu()
+    }
+
+    const onResize = () => {
+      closeMenu()
     }
 
     bindOnce(KEY_CONTEXTMENU, window, 'contextmenu', onContextMenu, true)
     bindOnce(KEY_MOUSEDOWN, window, 'mousedown', onMouseDown, true)
     bindOnce(KEY_KEYDOWN, window, 'keydown', onKeyDown, true)
     bindOnce(KEY_SCROLL, window, 'scroll', onScroll, true)
-    bindOnce(KEY_BLUR, window, 'blur', closeAll, false)
-    bindOnce(KEY_RESIZE, window, 'resize', closeAll, false)
+    bindOnce(KEY_BLUR, window, 'blur', onBlur, false)
+    bindOnce(KEY_RESIZE, window, 'resize', onResize, false)
 
     ctx.onDispose(() => {
       // Retract our row from quote-comment's registry: this module's closures
